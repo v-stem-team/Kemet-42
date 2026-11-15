@@ -495,7 +495,7 @@ function MoxieIndicator() {
         fontSize: "0.72rem", color: "#b0d8ff",
         transition: "all 0.4s ease",
       }}>
-        <span style={{ fontSize: "0.9rem" }}>:i-droplet:</span>
+        <span style={{ fontSize: "0.9rem" }}>:i-ice:</span>
         <span>{fr ? "Eau extraite" : "Water extracted"}</span>
         {flash && <b style={{ color: "#60dfff", marginLeft: 4 }}>+{(moxieCount * 2).toFixed(0)} L/Sol</b>}
       </div>
