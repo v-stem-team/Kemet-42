@@ -272,3 +272,18 @@ canvas { touch-action: none; }
 .intro-logo { width: 110px; height: 110px; margin: 0 auto 10px; display: block; filter: drop-shadow(0 6px 20px rgba(79, 209, 197, 0.35)); transition: transform .3s ease; }
 .intro-logo:hover { transform: scale(1.05) rotate(2deg); }
 .brand-logo { width: 24px; height: 24px; border-radius: 6px; display: inline-block; vertical-align: -5px; margin-right: 8px; filter: drop-shadow(0 2px 6px rgba(246, 201, 69, 0.4)); }
+
+/* Animation indicateur MOXIE */
+@keyframes moxie-pulse {
+  0%   { transform: scale(1); opacity: 0.6; }
+  25%  { transform: scale(1.06); opacity: 1; }
+  60%  { transform: scale(1.03); opacity: 1; }
+  100% { transform: scale(1); opacity: 0.85; }
+}
+
+/* Bouton Clôturer Sol : pulse urgent quand timer <= 5s */
+@keyframes sol-urgent {
+  0%, 100% { box-shadow: 0 6px 28px #ff6a3d66; }
+  50%       { box-shadow: 0 6px 40px #ff6a3dcc, 0 0 0 4px #ff6a3d44; }
+}
+.go.urgent { animation: sol-urgent 0.6s ease-in-out infinite; }

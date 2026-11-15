@@ -166,7 +166,7 @@ function ServerDock() {
         {err === "next" && <small style={{ color: "#ff8585" }}>:i-alert: {lang === "fr" ? "Serveur injoignable" : "Server unreachable"}</small>}
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <button
-            className="go"
+            className={"go" + (timer <= 5 ? " urgent" : "")}
             disabled={phase !== "plan"}
             onClick={() => { audio.unlock(); audio.ok(); c.nextDayServer(); }}
             style={{ padding: "12px 28px", fontSize: "1.05rem", minHeight: 48, boxShadow: "0 4px 20px rgba(255, 106, 61, 0.4)", display: "flex", alignItems: "center", gap: 10 }}
@@ -217,7 +217,7 @@ function Dock() {
       <div className="plan">
         <div className="plan-slots">{[0, 1].map((i) => { const p = plan[i], d = p && c.defOf(p.id); return (
           <div key={i} className={"slot" + (p ? " full" : "")}>{p ? (<><span>{ACT_ICON[p.id]}</span><b>{L(d.name, lang)}</b><em>{d.cost ? `−${d.cost}` : t("free0")}</em><button onClick={() => { audio.click(); c.removePlan(i); }} aria-label={t("cancel")}>✕</button></>) : <small>{t("planSlot", { n: i + 1 })} · {t("planEmpty")}</small>}</div>); })}</div>
-        <button className="go" disabled={locked} onClick={() => { audio.unlock(); audio.ok(); c.endDay(); }} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <button className={"go" + (timer <= 5 ? " urgent" : "")} disabled={locked} onClick={() => { audio.unlock(); audio.ok(); c.endDay(); }} style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <span>{plan.length ? t("launchDay") : t("endDay")}</span>
           <span style={{ background: "rgba(0,0,0,0.28)", padding: "2px 8px", borderRadius: 999, fontSize: "0.88rem", fontWeight: 700 }}>{timer}s</span>
           <span>:i-play:</span>
@@ -445,6 +445,137 @@ function Toast() {
   return toast ? <div className="toast">{toast.custom || t(toast.key)}</div> : null;
 }
 
+/** Indicateur flottant MOXIE : eau extraite + O₂ produit */
+function MoxieIndicator() {
+  const built  = useGame((s) => s.built);
+  const phase  = useGame((s) => s.phase);
+  const game   = useGame((s) => s.game);
+  const lang   = useGame((s) => s.lang);
+  const [flash, setFlash] = useState(false);
+
+  const moxieCount = (built?.moxie || []).length;
+  const fr = lang === "fr";
+
+  // Flash d'animation à chaque changement de Sol (phase "resolve")
+  useEffect(() => {
+    if (phase !== "resolve" || !moxieCount) return;
+    setFlash(true);
+    const id = setTimeout(() => setFlash(false), 2200);
+    return () => clearTimeout(id);
+  }, [phase, moxieCount]);
+
+  if (!moxieCount || (phase !== "plan" && !flash)) return null;
+
+  const o2perSol  = 5 * moxieCount;
+  const lowEnergy = (game?.resources?.energy || 100) < 20;
+  const eff = lowEnergy ? 0.5 : 1;
+
+  return (
+    <div
+      className="moxie-indicator"
+      style={{
+        position: "fixed",
+        left: 16,
+        bottom: "calc(var(--safe-b, 0px) + 280px)",
+        zIndex: 11,
+        display: "flex",
+        flexDirection: "column",
+        gap: 4,
+        pointerEvents: "none",
+        animation: flash ? "moxie-pulse 0.6s ease-out" : undefined,
+      }}
+    >
+      {/* Eau extraite */}
+      <div style={{
+        display: "flex", alignItems: "center", gap: 6,
+        padding: "4px 10px", borderRadius: 999,
+        background: flash ? "rgba(0, 100, 220, 0.75)" : "rgba(10, 20, 50, 0.65)",
+        border: `1px solid ${flash ? "#60b8ff" : "rgba(100,180,255,0.3)"}`,
+        backdropFilter: "blur(6px)",
+        fontSize: "0.72rem", color: "#b0d8ff",
+        transition: "all 0.4s ease",
+      }}>
+        <span style={{ fontSize: "0.9rem" }}>:i-droplet:</span>
+        <span>{fr ? "Eau extraite" : "Water extracted"}</span>
+        {flash && <b style={{ color: "#60dfff", marginLeft: 4 }}>+{(moxieCount * 2).toFixed(0)} L/Sol</b>}
+      </div>
+      {/* O₂ produit */}
+      <div style={{
+        display: "flex", alignItems: "center", gap: 6,
+        padding: "4px 10px", borderRadius: 999,
+        background: flash ? "rgba(0, 180, 100, 0.75)" : "rgba(10, 40, 25, 0.65)",
+        border: `1px solid ${flash ? "#4dffb0" : "rgba(80,220,150,0.3)"}`,
+        backdropFilter: "blur(6px)",
+        fontSize: "0.72rem", color: "#a0ffcc",
+        transition: "all 0.4s ease",
+      }}>
+        <span style={{ fontSize: "0.9rem" }}>:i-sparkles:</span>
+        <span>{fr ? "O₂ produit" : "O₂ produced"}</span>
+        {flash && <b style={{ color: "#4dffb0", marginLeft: 4 }}>+{Math.round(o2perSol * eff)}/Sol</b>}
+      </div>
+    </div>
+  );
+}
+
+/** Indicateur flottant de croissance de la serre */
+function GreenhouseGrowthIndicator() {
+  const built = useGame((s) => s.built);
+  const day   = useGame((s) => s.game?.day || 1);
+  const phase = useGame((s) => s.phase);
+  const lang  = useGame((s) => s.lang);
+
+  const hasGreenhouse = (built?.greenhouse || []).length > 0;
+  if (!hasGreenhouse || phase !== "plan") return null;
+
+  const fr = lang === "fr";
+  // Calcul de la croissance : 12% par Sol actif, plafonné à 100%
+  const growthPct = Math.min(100, day * 12);
+  const stage = growthPct < 25 ? (fr ? "Germination" : "Germinating")
+              : growthPct < 55 ? (fr ? "Pousse" : "Sprouting")
+              : growthPct < 80 ? (fr ? "Floraison" : "Flowering")
+              : (fr ? "Récolte prête" : "Ready to harvest");
+
+  return (
+    <div style={{
+      position: "fixed",
+      left: 16,
+      bottom: "calc(var(--safe-b, 0px) + 350px)",
+      zIndex: 11,
+      display: "flex",
+      flexDirection: "column",
+      gap: 3,
+      pointerEvents: "none",
+    }}>
+      <div style={{
+        display: "flex", alignItems: "center", gap: 6,
+        padding: "4px 10px", borderRadius: 999,
+        background: "rgba(10, 35, 15, 0.7)",
+        border: "1px solid rgba(100,220,120,0.4)",
+        backdropFilter: "blur(6px)",
+        fontSize: "0.72rem", color: "#a8f0b8",
+      }}>
+        <span style={{ fontSize: "0.9rem" }}>:i-sprout:</span>
+        <span>{fr ? "Serre" : "Greenhouse"}</span>
+        <b style={{ color: "#4dff80" }}>{growthPct}%</b>
+        <span style={{ opacity: 0.75 }}>— {stage}</span>
+      </div>
+      {/* Barre de progression de croissance */}
+      <div style={{
+        height: 4, borderRadius: 2,
+        background: "rgba(255,255,255,0.1)",
+        overflow: "hidden", width: 150, marginLeft: 2,
+      }}>
+        <div style={{
+          height: "100%", borderRadius: 2,
+          width: `${growthPct}%`,
+          background: "linear-gradient(90deg, #2ecc71, #7bdc6a)",
+          transition: "width 1s ease",
+        }} />
+      </div>
+    </div>
+  );
+}
+
 export function HUD() {
   const phase = useGame((s) => s.phase); const t = useT();
   const live = ["plan", "execute", "accident", "resolve", "summary", "fact", "quiz"].includes(phase);
@@ -460,6 +591,8 @@ export function HUD() {
       <Joystick />
       <Labels />
       <Toast />
+      <MoxieIndicator />
+      <GreenhouseGrowthIndicator />
       <div className="controls">{t("controls")}</div>
       <Dock />
     </div>

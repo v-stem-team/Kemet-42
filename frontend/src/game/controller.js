@@ -355,7 +355,13 @@ export function createController({ data: baseData, storage = memoryStorage(), bu
         safe(() => backend && s.user && backend.submitScore(s.user.token, { score: score.total, success: !!s.game.success, dest: s.dest, site: s.site, sol: s.game.day }), null); return;
       }
       if (g().life <= 0) return api._endByLife();
-      store.set({ phase: "quiz", pendingEvent: null, factId: null, plan: [], quiz: makeQuiz() }); persist();
+      // Quiz scientifique tous les 3 Sols (pas après chaque Sol)
+      const quizDay = g().game.day % 3 === 0;
+      if (quizDay) {
+        store.set({ phase: "quiz", pendingEvent: null, factId: null, plan: [], quiz: makeQuiz() }); persist();
+      } else {
+        store.set({ phase: "plan", pendingEvent: null, factId: null, plan: [] }); persist();
+      }
     },
     inspect(type) { store.set({ inspect: type }); },
     clearToast() { store.set({ toast: null }); },

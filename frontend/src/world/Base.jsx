@@ -103,11 +103,24 @@ function Solar() {
   );
 }
 function Moxie({ x, z }) {
-  const rings = useRef(), acc = useRef(0);
+  const rings = useRef(), acc = useRef(0), accWater = useRef(0);
   const ringMat = useMemo(() => new THREE.MeshStandardMaterial({ color: "#4FD1C5", emissive: "#4FD1C5", emissiveIntensity: 1.2 }), []);
   useFrame((s, dt) => {
     ringMat.emissiveIntensity = (0.5 + Math.sin(s.clock.elapsedTime * 3) * 0.4) * (1 - rt.w.dark * 0.9) + 0.2;
-    acc.current += dt; if (acc.current > 0.22 && rt.w.dust < 0.8) { acc.current = 0; fxSoft.emit({ x: x + 0.45, y: groundY(x, z) + 4.1, z, vx: 0.2, vy: 1.4, vz: 0.1, life: 2.6, s0: 0.25, s1: 1.2, a: 0.35, r: 0.95, g: 0.97, b: 1, drag: 0.3 }); }
+    // Bulles O₂ qui montent (blanc/vert clair)
+    acc.current += dt;
+    if (acc.current > 0.22 && rt.w.dust < 0.8) {
+      acc.current = 0;
+      fxSoft.emit({ x: x + 0.45, y: groundY(x, z) + 4.1, z, vx: 0.2, vy: 1.4, vz: 0.1, life: 2.6, s0: 0.25, s1: 1.2, a: 0.35, r: 0.95, g: 0.97, b: 1, drag: 0.3 });
+    }
+    // Particules d'eau extraite (bleu électrique, tombent du bas du module)
+    accWater.current += dt;
+    if (accWater.current > 0.55 && rt.w.dust < 0.8) {
+      accWater.current = 0;
+      fxSoft.emit({ x: x + (Math.random() - 0.5) * 0.6, y: groundY(x, z) + 0.5, z: z + (Math.random() - 0.5) * 0.6, vx: (Math.random() - 0.5) * 0.4, vy: -0.3, vz: (Math.random() - 0.5) * 0.4, life: 1.1, s0: 0.12, s1: 0.0, a: 0.7, r: 0.1, g: 0.5, b: 1.0, drag: 0.6, grav: 2 });
+      // 2e bulle O₂ de taille différente pour variation
+      fxSoft.emit({ x: x + (Math.random() - 0.5) * 0.3, y: groundY(x, z) + 4.4, z: z + (Math.random() - 0.5) * 0.3, vx: (Math.random() - 0.5) * 0.3, vy: 2.0 + Math.random(), vz: (Math.random() - 0.5) * 0.3, life: 1.8, s0: 0.14, s1: 0.5, a: 0.5, r: 0.7, g: 1.0, b: 0.7, drag: 0.4, grav: -0.5 });
+    }
   });
   return (
     <group>
@@ -116,6 +129,9 @@ function Moxie({ x, z }) {
       {[1.0, 2.0, 3.0].map((h) => <mesh key={h} material={ringMat} position-y={h}><torusGeometry args={[0.93, 0.07, 8, 28]} /></mesh>)}
       <mesh material={M.metal} position={[0.45, 3.9, 0]} rotation-z={0.2}><cylinderGeometry args={[0.12, 0.12, 0.9, 8]} /></mesh>
       <mesh material={M.dark} position={[1.3, 0.6, 0.5]} castShadow><boxGeometry args={[0.9, 1, 0.9]} /></mesh>
+      {/* Tuyau d'extraction d'eau visible */}
+      <mesh material={M.metal} position={[-0.9, 0.4, 0]} rotation-z={Math.PI / 2}><cylinderGeometry args={[0.07, 0.07, 1.6, 8]} /></mesh>
+      <mesh material={M.dark} position={[-1.65, 0.4, 0]}><sphereGeometry args={[0.14, 8, 8]} /></mesh>
     </group>
   );
 }

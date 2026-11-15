@@ -66,8 +66,8 @@ export function serverMethods({ store, bus, mission, later, RULES, writeSave, ba
       const s = g(); const end = evaluateEnd(s.srv, s.game.day, MAX_DAY);
       if (s.life <= 0) return finish({ over: true, success: false }, s.srv, "life");
       if (end.over) return finish(end, s.srv);
-      // Le quiz scientifique apparaît comme une étape bonus tous les 5 Sols (ou fin de mission)
-      const isQuizDay = s.game.day % 5 === 0;
+      // Le quiz scientifique apparaît comme une étape bonus tous les 3 Sols (ou fin de mission)
+      const isQuizDay = s.game.day % 3 === 0;
       if (isQuizDay) {
         store.set({ phase: "quiz", quiz: makeQuiz(), pendingEvent: null });
       } else {
